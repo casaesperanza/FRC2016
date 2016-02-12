@@ -47,7 +47,10 @@ public class Robot extends SampleRobot {
 	Talon rightController = new Talon(2);
 	Talon leftController = new Talon(3);
 	Talon rightController2= new Talon(1);
-	Talon leftController2= new Talon(4); 
+	Talon leftController2= new Talon(4);
+	Spark clawController= new Spark (5);
+	Spark upanddownController= new Spark (6);
+	Spark kickerController= new Spark (7);
 	RobotDrive robotDrive = new RobotDrive(leftController, leftController2, rightController, rightController2);
 	/*Talon frontRightController = new Talon(2);
 	Talon rearRightController = new Talon(1);
@@ -61,11 +64,11 @@ public class Robot extends SampleRobot {
     Joystick accessoryJoystick = new Joystick(1);
     
     // Forklift related
-    Jaguar forkliftMotorController = new Jaguar(5);
+   /* Jaguar forkliftMotorController = new Jaguar(5); 
     Encoder forkliftEncoder = new Encoder(0, 1);
     DigitalInput forkliftLowerSwitch = new DigitalInput(2);
     DigitalInput forkliftUpperSwitch = new DigitalInput(3);
-    DigitalInput pickupItemContactSwitch = new DigitalInput(4);
+    DigitalInput pickupItemContactSwitch = new DigitalInput(4);*/
     
     boolean robotInitted = false;
     boolean useForklift = false;
@@ -78,11 +81,11 @@ public class Robot extends SampleRobot {
         robotDrive.setExpiration(Robot.MOTOR_EXPIRATION);  
         robotDrive.setSafetyEnabled(true);
         
-        forkliftMotorController.setExpiration(Robot.MOTOR_EXPIRATION);
-        forkliftMotorController.setSafetyEnabled(true);
+       // forkliftMotorController.setExpiration(Robot.MOTOR_EXPIRATION);
+        //forkliftMotorController.setSafetyEnabled(true);
         
         // Reverse left side drive
-        robotDrive.setInvertedMotor(RobotDrive.MotorType.kFrontLeft, true);
+        //robotDrive.setInvertedMotor(RobotDrive.MotorType.kFrontLeft, true);
         
         // Ensure all motors are stopped (I don't believe we should have to do this)
         robotDrive.drive(0, 0);
@@ -94,9 +97,9 @@ public class Robot extends SampleRobot {
 
     public void autonomous() {
     	// Driver forward at half speed for 3 seconds
-        robotDrive.drive(0.25, 0);   
-        Timer.delay(3);
-        robotDrive.drive(0, 0);
+//        robotDrive.drive(0.25, 0);   
+//        Timer.delay(3);
+//        robotDrive.drive(0, 0);
     }
     
     
@@ -109,7 +112,6 @@ public class Robot extends SampleRobot {
         if(!robotInitted) {
           System.out.println("Robot not initted? Initting...");
           robotInit();
-          robotInitted = true; 
         }
         
         
@@ -151,7 +153,7 @@ public class Robot extends SampleRobot {
             
             
             // When we hit the bottom forklift limit, reset to zero
-            if(isForkliftAtLowerLimit()) {
+            /*if(isForkliftAtLowerLimit()) {
             	forkliftEncoder.reset();
             }
             
@@ -164,7 +166,7 @@ public class Robot extends SampleRobot {
         	SmartDashboard.putNumber("Timer.getFPGATimestamp()", Timer.getFPGATimestamp());
 //        	SmartDashboard.putNumber("forkliftMotorController.getRaw()", forkliftMotorController.getRaw());
 //        	if(sonar.isRangeValid()) {
-//        		SmartDashboard.putNumber("Range (in)", sonar.getRangeMM());
+//        		SmartDashboard.putNumber("Range (in)", sonar.getRangeMM());*/
 //        	} else {
 //        		SmartDashboard.putNumber("Range (in)", -1);
 //        	}
@@ -177,12 +179,12 @@ public class Robot extends SampleRobot {
     }
 
     protected void disabled() {
-        robotDrive.drive(0, 0 );
+        robotDrive.drive(0, 0);
         robotInitted = false;
-        forkliftMotorController.set(0);
+        //forkliftMotorController.set(0);
     }
     
-    protected boolean isForkliftAtLowerLimit() {
+   /* protected boolean isForkliftAtLowerLimit() {
     	return !forkliftLowerSwitch.get();
     }
     
@@ -192,7 +194,7 @@ public class Robot extends SampleRobot {
     
     protected boolean isInContactWithItem() {
     	return !pickupItemContactSwitch.get();
-    }
+    }*/
     
     
     
@@ -239,4 +241,6 @@ public class Robot extends SampleRobot {
 		SmartDashboard.putBoolean("accessoryJoystick.getRawButton(2)",accessoryJoystick.getRawButton(2));
 		SmartDashboard.putBoolean("accessoryJoystick.getRawButton(3)",accessoryJoystick.getRawButton(3));
 	}
+	
 }
+
