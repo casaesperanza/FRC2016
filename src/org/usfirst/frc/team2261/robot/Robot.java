@@ -25,7 +25,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  */
 public class Robot extends SampleRobot {
 
-    private static final double DEADZONE = -0.3;
+    //private static final double DEADZONE = -0.3;
 	static double UPDATE_DELAY = 0.0075; // How often to refresh
     static double MOTOR_EXPIRATION = UPDATE_DELAY * 4;
     
