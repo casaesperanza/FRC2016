@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="var" path="wpilib" sourcepath="wpilib.sources"/>
-	<classpathentry kind="var" path="networktables" sourcepath="networktables.sources"/>
+	<classpathentry kind="lib" path="build/jars/WPILib.jar"/>
+	<classpathentry kind="lib" path="C:/Users/Carlota/Desktop/CasaMesa2016/build/jars/NetworkTables.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

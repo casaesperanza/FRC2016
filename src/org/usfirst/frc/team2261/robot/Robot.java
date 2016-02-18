@@ -1,3 +1,5 @@
+package org.usfirst.frc.team2261.robot;
+
 /*----------------------------------------------------------------------------*/
 /* Copyright (c) FIRST 2008. All Rights Reserved.                             */
 /* Open Source Software - may be modified and shared by FRC teams. The code   */
@@ -5,21 +7,14 @@
 /* the project.                                                               */
 /*----------------------------------------------------------------------------*/
 
-package org.usfirst.frc.team2261.robot;
-
 import edu.wpi.first.wpilibj.DigitalInput;
-import edu.wpi.first.wpilibj.Encoder;
-import edu.wpi.first.wpilibj.Jaguar;
-import edu.wpi.first.wpilibj.Talon;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.RobotDrive;
 import edu.wpi.first.wpilibj.SampleRobot;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.Ultrasonic.Unit;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.vision.AxisCamera;
-import edu.wpi.first.wpilibj.Ultrasonic;
 import edu.wpi.first.wpilibj.Spark;
+import edu.wpi.first.wpilibj.Talon;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -30,8 +25,14 @@ import edu.wpi.first.wpilibj.Spark;
  */
 public class Robot extends SampleRobot {
 
-    static double UPDATE_DELAY = 0.0075; // How often to refresh
+    private static final double DEADZONE = -0.3;
+	static double UPDATE_DELAY = 0.0075; // How often to refresh
     static double MOTOR_EXPIRATION = UPDATE_DELAY * 4;
+    
+    // Dampening constants
+	private static final double kPWM = 0;
+	private static final double kPWM_MAX = 1;
+	private static final double kdPWM_MAX = 0.1;
     
     // IMPORTANT!!!!!!
     // Set to true for driving forklift from accesory y-axis (when not at limit or being driven by accesory buttons)
@@ -43,32 +44,25 @@ public class Robot extends SampleRobot {
     static double FORKLIFT_FULL_LIFT = 0.75;
     static double FORKLIFT_NOMINAL_DOWN = -0.5;
     
-    // Create a new RobotDrive, composed of the following Jaguar motor controllers
+    // Create a new RobotDrive, composed of the following motor controllers
 	Talon rightController = new Talon(2);
 	Talon leftController = new Talon(3);
-	Talon rightController2= new Talon(1);
-	Talon leftController2= new Talon(4);
-	Spark clawController= new Spark (5);
-	Spark upanddownController= new Spark (6);
-	Spark kickerController= new Spark (7);
-	RobotDrive robotDrive = new RobotDrive(leftController, leftController2, rightController, rightController2);
-	/*Talon frontRightController = new Talon(2);
-	Talon rearRightController = new Talon(1);
-	Talon frontLeftController = new Talon(4);
-	Talon rearLeftController = new Talon(3);
-    RobotDrive robotDrive = new RobotDrive(frontLeftController, rearLeftController,
-                                            frontRightController, rearRightController);
-    */
+	RobotDrive robotDrive = new RobotDrive(leftController, rightController);
+
+	Spark clawController= new Spark(5);
+	
+	Spark upAndDownController= new Spark(6);
+	
+	Spark kickerController= new Spark(7);
+
     // Create new Joystick on ports 1 and 2
     Joystick driverJoystick = new Joystick(0);
     Joystick accessoryJoystick = new Joystick(1);
+    static double prevPWM, dPWM = 0;
     
     // Forklift related
-   /* Jaguar forkliftMotorController = new Jaguar(5); 
-    Encoder forkliftEncoder = new Encoder(0, 1);
-    DigitalInput forkliftLowerSwitch = new DigitalInput(2);
+      DigitalInput forkliftLowerSwitch = new DigitalInput(2);
     DigitalInput forkliftUpperSwitch = new DigitalInput(3);
-    DigitalInput pickupItemContactSwitch = new DigitalInput(4);*/
     
     boolean robotInitted = false;
     boolean useForklift = false;
@@ -81,16 +75,14 @@ public class Robot extends SampleRobot {
         robotDrive.setExpiration(Robot.MOTOR_EXPIRATION);  
         robotDrive.setSafetyEnabled(true);
         
-       // forkliftMotorController.setExpiration(Robot.MOTOR_EXPIRATION);
-        //forkliftMotorController.setSafetyEnabled(true);
+        upAndDownController.setExpiration(Robot.MOTOR_EXPIRATION);
+        upAndDownController.setSafetyEnabled(true);
         
         // Reverse left side drive
         //robotDrive.setInvertedMotor(RobotDrive.MotorType.kFrontLeft, true);
         
         // Ensure all motors are stopped (I don't believe we should have to do this)
         robotDrive.drive(0, 0);
-        
-        //forkliftEncoder.setDistancePerPulse(distancePerPulse);
 
         robotInitted = true;
     }
@@ -114,62 +106,38 @@ public class Robot extends SampleRobot {
           robotInit();
         }
         
-        
-        
         // While still under operator control and enabled, "arcade drive" robot,
         // updating motors every 0.0075 second
         while(isOperatorControl() && isEnabled()) {
-//        	if(!sonar.isRangeValid()) {
-//        		sonar.ping();
-//        	}
           
             // Drive the Robot
-            robotDrive.arcadeDrive(scaleJoystickInput(driverJoystick.getX())/2,
-                                   scaleJoystickInput(driverJoystick.getY())/2);
+            robotDrive.arcadeDrive(scaleJoystickInput(driverJoystick.getY())/2,  // Y=Forward and Backward Drive
+                                   scaleJoystickInput(driverJoystick.getZ())/2); // Z= Rotate Clockwise and Counter-Clockwise
             
             // Forklift Operation
-          /*  if(isForkliftAtLowerLimit()) { // Trying to go down and not at lower limit
-            	forkliftMotorController.set(Robot.FORKLIFT_NOMINAL_UP);
+            if(isForkliftAtLowerLimit()) { // Trying to go down and not at lower limit
+            	upAndDownController.set(Robot.FORKLIFT_NOMINAL_UP);
             } else if(isForkliftAtUpperLimit()) { // While trying to go up and not at the upper limit
-            	forkliftMotorController.set(Robot.FORKLIFT_NOMINAL_DOWN);
+            	upAndDownController.set(Robot.FORKLIFT_NOMINAL_DOWN);
             } else if(accessoryJoystick.getRawButton(4)) { // While trying to go up and not at the upper limit
-            	forkliftMotorController.set(Robot.FORKLIFT_FULL_LIFT);
+            	upAndDownController.set(Robot.FORKLIFT_FULL_LIFT);
             } else if(accessoryJoystick.getRawButton(2)) { // Trying to go down and not at lower limit
-            	forkliftMotorController.set(Robot.FORKLIFT_NOMINAL_DOWN);
+            	upAndDownController.set(Robot.FORKLIFT_NOMINAL_DOWN);
             } else if(accessoryJoystick.getRawButton(1)) { // Hold a little
-            	forkliftMotorController.set(Robot.FORKLIFT_NOMINAL_UP);
+            	upAndDownController.set(Robot.FORKLIFT_NOMINAL_UP);
             } else if(accessoryJoystick.getRawButton(3)) { // Hold a lot
-            	forkliftMotorController.set(Robot.FORKLIFT_ALOT_UP);
+            	upAndDownController.set(Robot.FORKLIFT_ALOT_UP);
             } else {
             	if(Robot.MAP_YAXIS_TO_FORKLIFT) {
-            		forkliftMotorController.set(-accessoryJoystick.getY()); // For testing, map the accessory 
+            		upAndDownController.set(-accessoryJoystick.getY()); // For testing, map the accessory 
             										// joystick y-axis directly to the forklift motor controller
             	} else {
-                	forkliftMotorController.set(0); // When not testing,f no button is pressed, stop the motor
-            	}*/
-
-           // }
-            
-            
-            
-            // When we hit the bottom forklift limit, reset to zero
-            /*if(isForkliftAtLowerLimit()) {
-            	forkliftEncoder.reset();
+                	upAndDownController.set(0); // When not testing,f no button is pressed, stop the motor
+            	}
             }
-            
-            // Output debug information - e.g. - SmartDashboard.putBoolean("isInContactWithItem()", isInContactWithItem());
-        	SmartDashboard.putNumber("accessoryJoystick.getY (forklift)", accessoryJoystick.getY());
-        	SmartDashboard.putBoolean("isForkliftAtLowerLimit()", isForkliftAtLowerLimit());
-        	SmartDashboard.putBoolean("isForkliftAtUpperLimit()", isForkliftAtUpperLimit());
-        	SmartDashboard.putBoolean("isInContactWithItem()", isInContactWithItem());
-        	SmartDashboard.putNumber("Timer.getMatchTime()", Timer.getMatchTime());
-        	SmartDashboard.putNumber("Timer.getFPGATimestamp()", Timer.getFPGATimestamp());
-//        	SmartDashboard.putNumber("forkliftMotorController.getRaw()", forkliftMotorController.getRaw());
-//        	if(sonar.isRangeValid()) {
-//        		SmartDashboard.putNumber("Range (in)", sonar.getRangeMM());*/
-//        	} else {
-//        		SmartDashboard.putNumber("Range (in)", -1);
-//        	}
+
+            // Print debug info
+            putSmartDashboardValues();
             
             Timer.delay(Robot.UPDATE_DELAY); // Wait the specified second before updating again
         }
@@ -178,24 +146,47 @@ public class Robot extends SampleRobot {
         robotDrive.drive(0, 0);
     }
 
-    protected void disabled() {
+	private double getAdjustedJoystickValue() {
+		double scaledJoystick = scaleJoystickInput(driverJoystick.getY());
+		
+		scaledJoystick = getDampenedJoystickInput(scaledJoystick);
+		
+		return scaledJoystick;
+	}
+
+    protected static double getDampenedJoystickInput(double scaledJoystick) {
+		double dPWN_new = scaledJoystick;
+		
+		dPWN_new = kPWM * dPWN_new;
+		dPWN_new = sign(dPWN_new) * Math.min(kPWM_MAX, dPWN_new);
+		
+		double ddPWM_req  = dPWN_new - dPWM;
+		double ddPWM_new = sign(ddPWM_req) * Math.min(kdPWM_MAX, ddPWM_req);
+		dPWN_new = dPWN_new + ddPWM_new;
+		
+    	dPWM = dPWN_new;
+    	prevPWM = dPWN_new + prevPWM;
+    	
+		return prevPWM;
+	}
+
+	private static double sign(double value) {
+		return value < 0 ? -1 : 1;
+	}
+
+	protected void disabled() {
         robotDrive.drive(0, 0);
         robotInitted = false;
-        //forkliftMotorController.set(0);
+        upAndDownController.set(0);
     }
     
-   /* protected boolean isForkliftAtLowerLimit() {
+    protected boolean isForkliftAtLowerLimit() {
     	return !forkliftLowerSwitch.get();
     }
     
     protected boolean isForkliftAtUpperLimit() {
     	return !forkliftUpperSwitch.get();
     }
-    
-    protected boolean isInContactWithItem() {
-    	return !pickupItemContactSwitch.get();
-    }*/
-    
     
     
     /**
@@ -221,6 +212,12 @@ public class Robot extends SampleRobot {
     }
     
 	private void putSmartDashboardValues() {
+		/*
+    	SmartDashboard.putNumber("accessoryJoystick.getY (forklift)", accessoryJoystick.getY());
+    	SmartDashboard.putBoolean("isForkliftAtLowerLimit()", isForkliftAtLowerLimit());
+    	SmartDashboard.putBoolean("isForkliftAtUpperLimit()", isForkliftAtUpperLimit());
+    	SmartDashboard.putNumber("upAndDownController.getRaw()", upAndDownController.getRaw());
+    	*/
 		SmartDashboard.putNumber("driverJoystick.getX()", driverJoystick.getX());
 		SmartDashboard.putNumber("scaleJoystickInput(driverJoystick.getX())",
 		                            scaleJoystickInput(driverJoystick.getX()));
